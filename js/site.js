@@ -111,6 +111,29 @@ function initGSAP() {
         scrollTrigger: { trigger: '.team__grid', start: 'top 80%' },
         scale: 0.88, opacity: 0, duration: 0.5, stagger: 0.07, ease: 'back.out(1.3)'
     });
+
+    // --- YENİ EKLENEN KISIM: Zıplamayı Önleyip Animasyonu Tetikleyen Kod ---
+    // Sayfa içindeki (#) bağlantılı menü linklerine tıklandığında devreye girer
+    document.querySelectorAll('.nav-links a[href^="/#"], a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            const href = this.getAttribute('href');
+            // Hedef kimliği ayıkla (örnek: "/#team" -> "#team")
+            const targetId = href.includes('#') ? href.substring(href.indexOf('#')) : '';
+            const targetElement = document.querySelector(targetId);
+
+            if (targetElement) {
+                e.preventDefault(); // Anında zıplamayı engelle
+
+                // Hedef bölüme yumuşak bir şekilde kaydır (GSAP bu kaymayı algılayacaktır)
+                targetElement.scrollIntoView({ behavior: 'smooth' });
+
+                // Kaydırma bitimine yakın ScrollTrigger'ı yenileyerek görünmez kalmaları kesin olarak önle
+                setTimeout(() => {
+                    ScrollTrigger.refresh();
+                }, 600);
+            }
+        });
+    });
 }
 
 function startTelemetry() {

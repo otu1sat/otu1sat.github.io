@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "OtusatWeb",
   "resources": {
-    "hash": "sha256-2CAUkounaDA+yN8Q3MlTjp9kHcttETgBDEN88o6KMmk=",
+    "hash": "sha256-h9ugU3cRg8ijIYjyl1fprsQym3Vds5V9Qrn3RA8doLg=",
     "jsModuleNative": {
       "dotnet.native.8.0.25.1667maogwq.js": "sha256-A16ka545FHaB+QXjyJ4exXh7XpBAAIFnX8YkC4xAng8="
     },
@@ -31,7 +31,7 @@
       "Microsoft.Extensions.Primitives.wasm": "sha256-6187ynEahDlSLMBvD4vAmiLpZ3clRb5xu6rM7O8AxNo=",
       "Microsoft.JSInterop.wasm": "sha256-7BlYoTQZVtJEzaDSp+KImqEk3OVVDarnw63nqcmcrAw=",
       "Microsoft.JSInterop.WebAssembly.wasm": "sha256-0OtDNXiCyJr7Dgnzk/Ma9P9YqPd/UKpaUvwL0ef3PUA=",
-      "OtusatWeb.wasm": "sha256-iFM6ZV+BzgbtF5yrw33e3+LVDOwVKdcDlC9forE+W+g=",
+      "OtusatWeb.wasm": "sha256-AAVGS4/9cg3Nuyd7IuFpZHrPX+Lr8SAJlogX+gdMyR4=",
       "System.Collections.Concurrent.wasm": "sha256-Rq+d0c+kmIpR/zo5PqMyF6zgCvvsLABGP3vbyKxco5E=",
       "System.Collections.wasm": "sha256-hKnlR1tSnJETlSVeUJxP4nQ3aVtesHi6aHFiI38B8sg=",
       "System.ComponentModel.wasm": "sha256-IpqhjuxuJnk/BfF4PAqhTM3ZU9QoXopo0gtgTsqanBc=",
@@ -42,7 +42,7 @@
       "System.Net.Http.Json.wasm": "sha256-mItG3hLTS6zncN4a3u8Fu03LFgbdOJJp05ctQ/NePpI=",
       "System.Net.Http.wasm": "sha256-yISmfGcTF41PFuyQjjk4mAUFGX1qGew1Mq//DzGbbp4=",
       "System.Net.Primitives.wasm": "sha256-Wc+sKLo5X3nDO6Ytr/rqPk8uBBjH6oaR6wMB3qW1Ims=",
-      "System.Private.CoreLib.wasm": "sha256-eOE3YGtEJNnWkXTe7zrcn+5gyy1ANkyh/+QLGiqQrpI=",
+      "System.Private.CoreLib.wasm": "sha256-gznqKpea0R8ewrtDKxlQqxwZ2nzqvZ0q5fTeT0XBIjM=",
       "System.Private.Uri.wasm": "sha256-Zm3A0i8EBk+35g5ECmRffSevoYkpGvuA2m7nKXd2L+o=",
       "System.Runtime.InteropServices.JavaScript.wasm": "sha256-iECNJ5oM8Qd4i2EABSnlf0RN1PSTwgukfnYXdQgIXxw=",
       "System.Runtime.wasm": "sha256-pk99OqXvaTHg8zng0/qGpbmS5NeUAmd0hZR8NkGev0k=",
