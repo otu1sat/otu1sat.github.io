@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "OtusatWeb",
   "resources": {
-    "hash": "sha256-v7Z1ZF4B7OXDYo8L6URH7HBZUCNhUZv3xmpbWBkxJzE=",
+    "hash": "sha256-UJjxiDi8VTEDlUAKKajmOkWXZ0spDbv57RsKNIv9wXY=",
     "jsModuleNative": {
       "dotnet.native.js": "sha256-kl1kEnJ/0kgP6CiBXxh0TGGx8OxEjqiOqEqYEpUL7HE="
     },
@@ -49,7 +49,7 @@
       "System.Text.Json.wasm": "sha256-/JoO9J79B7Phxwz1DZh9G9xEfEDJhB3SehnT2nyve3Y=",
       "System.Text.RegularExpressions.wasm": "sha256-6lTM5rK99dTveKD7N9enrJEr67CxhLZgBg3Jkk0mIgo=",
       "System.Private.CoreLib.wasm": "sha256-E29YRJN5i+Ohge/r6rrY01KleADuO0Snt3O7C0slmt4=",
-      "OtusatWeb.wasm": "sha256-7QzHNn+y10oBooW7uQWLUEK8/911ZR4iAsHtWV65keI="
+      "OtusatWeb.wasm": "sha256-Rempx3opSEp0JJ49/DrBbsUe79wwJlF3/Z7GEBOAja8="
     }
   },
   "cacheBootResources": true,

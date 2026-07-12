@@ -32,3 +32,168 @@ html, body {
 #app {
     height: 100%;
 }
+
+/* =====================================================
+   NAV / HUD — Global (CSS isolation hash fallback)
+   These mirror MainLayout.razor.css to ensure styles
+   apply on GitHub Pages regardless of hash mismatches.
+===================================================== */
+
+.page-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.top-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 70px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 50px;
+    background: rgba(5, 5, 5, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 184, 0, 0.2);
+    z-index: 1000;
+    box-sizing: border-box;
+}
+
+.logo {
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: 3px;
+    color: #e0e0e0;
+}
+
+.logo-accent {
+    color: #00f0ff;
+    text-shadow: 0 0 12px #00f0ff;
+}
+
+.nav-links {
+    list-style: none;
+    display: flex;
+    gap: 40px;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-links a {
+    color: #e0e0e0;
+    text-decoration: none;
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+    transition: color 0.3s ease;
+}
+
+.nav-links a:hover {
+    color: #00f0ff;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.motion-toggle {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 184, 0, 0.3);
+    color: #ffb800;
+    padding: 5px 12px;
+    font-family: inherit;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.motion-toggle:hover {
+    background: rgba(255, 184, 0, 0.1);
+    border-color: #ffb800;
+    box-shadow: 0 0 10px rgba(255, 184, 0, 0.2);
+}
+
+.content {
+    padding-top: 70px;
+    margin: 0;
+    width: 100%;
+}
+
+.mobile-menu-btn {
+    display: none;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 10px;
+    z-index: 1001;
+}
+
+.hamburger-line {
+    display: block;
+    width: 25px;
+    height: 3px;
+    margin: 5px 0;
+    background-color: #00f0ff;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 5px #00f0ff;
+}
+
+@media (max-width: 768px) {
+    .top-bar {
+        padding: 0 20px;
+    }
+
+    .desktop-only {
+        display: none !important;
+    }
+
+    .mobile-menu-btn {
+        display: block;
+        order: 3;
+    }
+
+    .header-actions {
+        order: 2;
+        margin-left: auto;
+        margin-right: 15px;
+    }
+
+    .nav-links {
+        position: absolute;
+        top: 70px;
+        left: 0;
+        width: 100%;
+        background: rgba(10, 10, 15, 0.98);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        flex-direction: column;
+        align-items: center;
+        gap: 25px;
+        padding: 40px 0;
+        border-bottom: 2px solid #00f0ff;
+        box-shadow: 0 15px 40px rgba(0,0,0,0.8);
+        transform: translateY(-120%);
+        opacity: 0;
+        pointer-events: none;
+        transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.4s ease;
+    }
+
+    .nav-links.nav-links--open {
+        transform: translateY(0);
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .nav-links a {
+        font-size: 1.2rem;
+        font-weight: bold;
+        padding: 10px 20px;
+        display: block;
+        text-shadow: 0 0 5px rgba(0, 240, 255, 0.3);
+    }
+}
