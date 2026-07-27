@@ -2,27 +2,154 @@
 // OTUSAT-1 Ground Station — JS Interop Module
 // =============================================
 
-// Prevent browser from restoring scroll position on SPA navigation
+// SPA navigasyonunda tarayıcının scroll pozisyonunu geri yüklemesini engelle
 history.scrollRestoration = 'manual';
 
-let isMotionEnabled = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const MOTION_KEY = 'motionEnabled';
 
+// ---------------------------------------------
+// HAREKET DURUMU
+// Durumun tek sahibi burasıdır. Blazor render döngüsünden bağımsız
+// olarak sayfa yüklenir yüklenmez senkron biçimde belirlenir; böylece
+// component'ler hangi sırada render olursa olsun durum tutarlıdır.
+// ---------------------------------------------
+let isMotionEnabled = (() => {
+    try {
+        const stored = localStorage.getItem(MOTION_KEY);
+        if (stored === 'true') return true;
+        if (stored === 'false') return false;
+    } catch {
+        // Gizli sekme / storage kapalı — sistem tercihine düş
+    }
+    return !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+})();
+
+function applyMotionClass() {
+    document.documentElement.classList.toggle('reduce-motion', !isMotionEnabled);
+}
+
+applyMotionClass();
+
+// Blazor'un çağırdığı okuma ucu. matchMedia'yı doğrudan interop'a
+// açmak yerine burada bool'a indirgiyoruz (MediaQueryList serialize edilemez).
+function getMotionStatus() {
+    return isMotionEnabled;
+}
+
+function setMotionStatus(status) {
+    isMotionEnabled = !!status;
+    applyMotionClass();
+
+    try {
+        localStorage.setItem(MOTION_KEY, isMotionEnabled ? 'true' : 'false');
+    } catch {
+        // Kalıcı yazamıyorsak sessizce geç, oturum içi davranış korunur
+    }
+
+    // GSAP scroll animasyonlarını yeni duruma göre kur veya kaldır
+    refreshGSAP();
+    return isMotionEnabled;
+}
+
+// ---------------------------------------------
+// NAVİGASYON / SCROLL
+// ---------------------------------------------
 function scrollToTop() {
-    // Bypass CSS smooth-scroll for instant navigation reset
+    // CSS smooth-scroll'u anlık sıfırlama için geçici olarak devre dışı bırak
+    const prev = document.documentElement.style.scrollBehavior;
     document.documentElement.style.scrollBehavior = 'auto';
-    document.body.style.scrollBehavior = 'auto';
     window.scrollTo(0, 0);
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
-    setTimeout(() => {
-        document.documentElement.style.scrollBehavior = '';
-        document.body.style.scrollBehavior = '';
-    }, 50);
+    requestAnimationFrame(() => {
+        document.documentElement.style.scrollBehavior = prev;
+    });
 }
 
+// Navigasyon sonrası konumlanma. URL'de fragment varsa ilgili bölüme
+// iner, yoksa sayfa başına döner. Hedef eleman henüz render edilmemiş
+// olabileceği için birkaç frame boyunca tekrar dener.
+// Yeni sayfa render edilip GSAP tetikleyicileri kurulana kadar false kalır.
+// Kaydırmayı bu bayrağa bağlamak, ölçümlerin kaydırma sürerken yapılmasından
+// doğan yarışı ortadan kaldırır.
+let layoutReady = true;
+
+// Erişilebilirlik: sayfa değişince odağı yeni başlığa taşı. preventScroll
+// şart — onsuz tarayıcı odaklanan elemanı görünür kılmak için sayfayı
+// kaydırır ve fragment hedefinden geri fırlatır (FocusOnNavigate'in yaptığı).
+function focusHeading(fallback) {
+    const el = fallback || document.querySelector('h1');
+    if (!el) return;
+    if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1');
+    try {
+        el.focus({ preventScroll: true });
+    } catch {
+        // preventScroll desteklenmiyorsa odaklamayı hiç yapma; kaydırmayı
+        // bozmak, odak taşımamaktan daha kötü.
+    }
+}
+
+// ScrollTrigger.refresh() ölçüm sırasında sayfayı geçici olarak 0'a alıp geri
+// yükler. Bu yüzden yalnızca kaydırmadan ÖNCE çağrılmalı; sonrasında çağrılırsa
+// süren yumuşak kaydırmayı iptal eder.
+function refreshTriggerPositions() {
+    if (typeof ScrollTrigger === 'undefined') return;
+    ScrollTrigger.refresh();
+}
+
+function handleNavigation() {
+    const hash = window.location.hash;
+    const hasFragment = hash && hash.length > 1;
+
+    let attempts = 0;
+    (function seek() {
+        let target = null;
+        if (hasFragment) {
+            try {
+                target = document.querySelector(hash);
+            } catch {
+                // Geçersiz seçici üreten fragment (ör. "#1bolum")
+            }
+        }
+
+        // Hedef henüz render edilmediyse ya da tetikleyiciler kurulmadıysa bekle.
+        if ((hasFragment && !target) || !layoutReady) {
+            if (attempts++ < 60) {
+                requestAnimationFrame(seek);
+                return;
+            }
+        }
+
+        refreshTriggerPositions();
+
+        if (target) {
+            target.scrollIntoView({
+                behavior: isMotionEnabled ? 'smooth' : 'instant',
+                block: 'start'
+            });
+            focusHeading(target.querySelector('h1, h2'));
+        } else {
+            scrollToTop();
+            focusHeading();
+        }
+    })();
+}
+
+// ---------------------------------------------
+// YILDIZ ALANI (Three.js)
+// Tek sefer kurulur. Home component'i her yeniden ziyarette yeniden
+// mount olduğu için, guard olmadan her seferinde yeni bir WebGL
+// renderer + animasyon döngüsü + event listener birikirdi.
+// ---------------------------------------------
+let starfieldReady = false;
+
 function initStarfield() {
+    if (starfieldReady) return;
+
     const canvas = document.getElementById('bg-canvas');
     if (!canvas || typeof THREE === 'undefined') return;
+
+    starfieldReady = true;
 
     const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -61,7 +188,7 @@ function initStarfield() {
     scene.add(stars);
 
     let scrollY = 0;
-    window.addEventListener('scroll', () => { scrollY = window.scrollY; });
+    window.addEventListener('scroll', () => { scrollY = window.scrollY; }, { passive: true });
     window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
@@ -72,22 +199,37 @@ function initStarfield() {
     (function animate() {
         requestAnimationFrame(animate);
         if (isMotionEnabled) {
-            time += 0.0002; // Reduced from 0.0004
+            time += 0.0002;
             stars.rotation.y = time;
-            stars.rotation.x = scrollY * 0.00002; // Reduced from 0.00004
+            stars.rotation.x = scrollY * 0.00002;
         }
         renderer.render(scene, camera);
     })();
 }
 
-function setMotionStatus(status) {
-    isMotionEnabled = status;
-}
-
+// ---------------------------------------------
+// SCROLL ANİMASYONLARI (GSAP)
+// ---------------------------------------------
+const ANIMATED_SELECTORS = ['.section-header', '.mission__description', '.mission__specs-panel', '.team-card'];
 
 function initGSAP() {
-    if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return;
+    if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') {
+        layoutReady = true;
+        return;
+    }
     gsap.registerPlugin(ScrollTrigger);
+
+    // Önceki mount'tan kalan trigger'lar artık DOM'da olmayan
+    // elemanlara işaret ediyor olabilir — temizle.
+    ScrollTrigger.getAll().forEach(t => t.kill());
+
+    // Hareket kapalıyken hiçbir şeyi gizleme: gsap.from() elemanları
+    // opacity:0 ile başlatacağı için animasyonsuz modda içerik
+    // kalıcı olarak görünmez kalırdı.
+    if (!isMotionEnabled) {
+        ANIMATED_SELECTORS.forEach(sel => gsap.set(sel, { clearProps: 'all' }));
+        return;
+    }
 
     gsap.utils.toArray('.section-header').forEach(el => {
         gsap.from(el, { scrollTrigger: { trigger: el, start: 'top 85%' }, x: -60, opacity: 0, duration: 0.9, ease: 'power3.out' });
@@ -102,114 +244,69 @@ function initGSAP() {
         x: 80, opacity: 0, duration: 1.0, delay: 0.15, ease: 'power3.out'
     });
 
-    gsap.from('.telem-card', {
-        scrollTrigger: { trigger: '.telemetry__grid', start: 'top 80%' },
-        y: 50, opacity: 0, duration: 0.5, stagger: 0.08, ease: 'power2.out'
-    });
-
     gsap.from('.team-card', {
         scrollTrigger: { trigger: '.team__grid', start: 'top 80%' },
         scale: 0.88, opacity: 0, duration: 0.5, stagger: 0.07, ease: 'back.out(1.3)'
     });
-
-    // --- YENİ EKLENEN KISIM: Zıplamayı Önleyip Animasyonu Tetikleyen Kod ---
-    // Sayfa içindeki (#) bağlantılı menü linklerine tıklandığında devreye girer
-    document.querySelectorAll('.nav-links a[href^="/#"], a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-            const href = this.getAttribute('href');
-            // Hedef kimliği ayıkla (örnek: "/#team" -> "#team")
-            const targetId = href.includes('#') ? href.substring(href.indexOf('#')) : '';
-            const targetElement = document.querySelector(targetId);
-
-            if (targetElement) {
-                e.preventDefault(); // Anında zıplamayı engelle
-
-                // Hedef bölüme yumuşak bir şekilde kaydır (GSAP bu kaymayı algılayacaktır)
-                targetElement.scrollIntoView({ behavior: 'smooth' });
-
-                // Kaydırma bitimine yakın ScrollTrigger'ı yenileyerek görünmez kalmaları kesin olarak önle
-                setTimeout(() => {
-                    ScrollTrigger.refresh();
-                }, 600);
-            }
-        });
-    });
 }
 
-function startTelemetry() {
-    const msgs = [
-        'ADCS KALİBRASYONU TAMAMLANDI.',
-        'YENİ PAKET ALINDI. SEQ: {PKT}',
-        'GÜNEŞ PANELİ VERİMİ: {SOL}%',
-        'GPS KONUM GÜNCELLENDİ.',
-        'BATARYA ŞARJ DÖNGÜSÜ AKTİF.',
-        'RF BAĞLANTI STABIL. RSSI: {SIG} dBm',
-        'OBC SICAKLIK: NOMİNAL',
-        'YÖN KONTROL MOMENTİ HESAPLANDI.',
-        'TELEMETRI ÇERÇEVESİ GÖNDERİLDİ.',
-    ];
+// Hareket durumu değiştiğinde animasyonları yeniden kur.
+// Ana sayfada değilsek sadece temizlik yeterli.
+function refreshGSAP() {
+    if (typeof ScrollTrigger === 'undefined') return;
 
-    let packetCount = 4721, signalVal = -87, battVal = 78,
-        tempVal = 24, altVal = 551.2, solarVal = 1.8, logSec = 12;
+    if (!document.querySelector('.team__grid')) {
+        ScrollTrigger.getAll().forEach(t => t.kill());
+        return;
+    }
 
-    setInterval(() => {
-        signalVal += (Math.random() - 0.5) * 3;
-        signalVal  = Math.max(-105, Math.min(-65, signalVal));
-        _setText('signal-strength', Math.round(signalVal));
-
-        battVal += (Math.random() - 0.47) * 0.25;
-        battVal  = Math.max(55, Math.min(100, battVal));
-        _setText('battery-level', Math.round(battVal));
-        _setStyle('battery-fill', 'width', Math.round(battVal) + '%');
-
-        tempVal += (Math.random() - 0.5) * 1.5;
-        tempVal  = Math.max(-15, Math.min(65, tempVal));
-        _setText('temperature', (tempVal >= 0 ? '+' : '') + Math.round(tempVal));
-        _setCSSVar('temp-bar', '--temp-pct', (((tempVal + 15) / 80) * 100).toFixed(1) + '%');
-
-        altVal += (Math.random() - 0.5) * 0.4;
-        altVal  = Math.max(540, Math.min(565, altVal));
-        _setText('altitude-val', altVal.toFixed(1));
-
-        solarVal += (Math.random() - 0.5) * 0.2;
-        solarVal  = Math.max(0.2, Math.min(2.0, solarVal));
-        _setText('solar-power', solarVal.toFixed(1));
-        _setCSSVar('solar-bar', '--solar-pct', ((solarVal / 2.0) * 100).toFixed(1) + '%');
-
-        packetCount += Math.floor(Math.random() * 3) + 1;
-        _setText('packet-count', String(packetCount).padStart(6, '0'));
-
-        const stream = document.getElementById('log-stream');
-        if (stream) {
-            logSec += Math.floor(Math.random() * 6) + 2;
-            const hh = String(Math.floor(logSec / 3600)).padStart(2,'0');
-            const mm = String(Math.floor((logSec % 3600) / 60)).padStart(2,'0');
-            const ss = String(logSec % 60).padStart(2,'0');
-            const msg = msgs[Math.floor(Math.random() * msgs.length)]
-                .replace('{PKT}', packetCount)
-                .replace('{SOL}', (80 + Math.random() * 15).toFixed(1))
-                .replace('{SIG}', Math.round(signalVal));
-            const entry = document.createElement('div');
-            entry.className = 'log-entry log-entry--new';
-            entry.textContent = `[${hh}:${mm}:${ss}] ${msg}`;
-            stream.appendChild(entry);
-            if (stream.children.length > 10) stream.removeChild(stream.firstChild);
-            stream.scrollTop = stream.scrollHeight;
-            setTimeout(() => entry.classList.remove('log-entry--new'), 500);
-        }
-    }, 2000);
+    initGSAP();
 }
+
+// ---------------------------------------------
+// UTC SAATİ
+// Tek bir interval yeterli; Home her mount olduğunda yenisi kurulmamalı.
+// ---------------------------------------------
+let clockStarted = false;
 
 function startUTCClock() {
+    if (clockStarted) return;
+    clockStarted = true;
+
     function tick() {
-        const n = new Date();
-        _setText('hero-utc', [n.getUTCHours(), n.getUTCMinutes(), n.getUTCSeconds()]
-            .map(x => String(x).padStart(2,'0')).join(':'));
+        const now = new Date();
+        _setText('hero-utc', [now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds()]
+            .map(x => String(x).padStart(2, '0')).join(':'));
     }
+
     tick();
     setInterval(tick, 1000);
 }
 
-function _setText(id, val)             { const el = document.getElementById(id); if (el) el.textContent = val; }
-function _setStyle(id, prop, val)      { const el = document.getElementById(id); if (el) el.style[prop] = val; }
-function _setCSSVar(id, name, val)     { const el = document.getElementById(id); if (el) el.style.setProperty(name, val); }
+// ---------------------------------------------
+// ANA SAYFA GİRİŞ NOKTASI
+// ---------------------------------------------
+function initHome() {
+    // Kaydırma, tetikleyiciler kurulana kadar beklesin.
+    layoutReady = false;
+    initStarfield();
+    initGSAP();
+    startUTCClock();
+    layoutReady = true;
+}
+
+// Ana sayfa dışındaki sayfalarda GSAP tetikleyicisi yok; kaydırma beklemesin.
+function markLayoutReady() {
+    layoutReady = true;
+}
+
+// Rota değişimi başladığında çağrılır: hedef sayfa mount olup tetikleyicilerini
+// kurana kadar handleNavigation kaydırma yapmasın.
+function beginNavigation() {
+    layoutReady = false;
+}
+
+function _setText(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+}
